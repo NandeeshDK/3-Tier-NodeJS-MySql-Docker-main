@@ -1,49 +1,10 @@
-# Kubernetes RBAC Configuration
-
-Role-Based Access Control (RBAC) configuration for Jenkins service account to manage Kubernetes resources.
-
-## 📋 Overview
-
-This directory contains RBAC configuration that provides Jenkins with the necessary permissions to:
-- Deploy applications to Kubernetes
-- Manage pods, services, deployments
-- Create and manage persistent volumes
-- Switch traffic between Blue-Green deployments
-
-## 🔐 Security Components
-
-### Service Account
-- **Name**: jenkins
-- **Namespace**: webapps
-- **Purpose**: Identity for Jenkins to authenticate with Kubernetes
-
-### Role (Namespace-scoped)
-- **Name**: app-role
-- **Scope**: webapps namespace
-- **Permissions**: Full access to application resources within namespace
-
-### ClusterRole (Cluster-wide)
-- **Name**: persistent-volume-access
-- **Scope**: Cluster-level
-- **Permissions**: Manage PersistentVolumes (cluster-scoped resource)
-
-## Create Service Account, Role, ClusterRole & Assign that role, And create a secret for Service Account and generate a Token
-
-### Creating Service Account
-
-
-```yaml
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: jenkins
   namespace: webapps
-```
-
-### Create Role 
-
-
-```yaml
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -74,7 +35,6 @@ rules:
       - namespaces
       - nodes
       - pods
-      - persistentvolumes
       - persistentvolumeclaims
       - resourcequotas
       - replicasets
@@ -82,12 +42,7 @@ rules:
       - serviceaccounts
       - services
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-```
-
-### Bind the role to service account
-
-
-```yaml
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -100,13 +55,8 @@ roleRef:
 subjects:
 - namespace: webapps 
   kind: ServiceAccount
-  name: jenkins 
-```
-
-
-### Create a ClusterRole for PV access
-
-```yaml
+  name: jenkins
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -115,12 +65,7 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-
-```
-
-### Bind the clusterRole to Jenkins Service Account
-
-```yaml
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -133,10 +78,3 @@ roleRef:
   kind: ClusterRole
   name: persistent-volume-access
   apiGroup: rbac.authorization.k8s.io
-
-```
-
-
-### Generate token using service account in the namespace
-
-[Create Token](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#:~:text=To%20create%20a%20non%2Dexpiring,with%20that%20generated%20token%20data.)

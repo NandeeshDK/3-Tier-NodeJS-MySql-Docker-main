@@ -1,169 +1,307 @@
+# 3-Tier NodeJS MySQL Docker Application
 
-# DevOps Shack User Management App
+A production-ready, scalable 3-tier web application with Blue-Green deployment strategy on AWS EKS.
 
-This is a full-stack application for managing users with a front-end built using HTML, CSS, and JavaScript, and a back-end powered by Node.js, Express, and MySQL.
+## 🚀 Project Overview
 
-## Table of Contents
+This project demonstrates a complete DevOps pipeline for a full-stack application:
+- **Frontend**: HTML, CSS, JavaScript (Client-side rendered)
+- **Backend**: Node.js with Express.js REST API
+- **Database**: MySQL 
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes (AWS EKS)
+- **CI/CD**: Jenkins Pipeline
+- **Deployment Strategy**: Blue-Green Deployment
+- **Infrastructure as Code**: Terraform
+
+## 📋 Table of Contents
 
 - [Features](#features)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
-- [Setup Instructions](#setup-instructions)
-  - [1. Setting Up MySQL Server](#1-setting-up-mysql-server)
-  - [2. Configuring and Running the Client](#2-configuring-and-running-the-client)
-  - [3. Configuring and Running the Server](#3-configuring-and-running-the-server)
-- [Usage](#usage)
-- [License](#license)
+- [Quick Start](#quick-start)
+- [Deployment](#deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Monitoring](#monitoring)
+- [Contributing](#contributing)
 
-## Features
+## ✨ Features
 
-- Add new users with a name, email, and role (User/Admin).
-- View a list of all users.
-- Edit user details.
-- Delete users.
-- Responsive and user-friendly UI.
-- Smooth animations and minimalistic design.
+### Application Features
+- ✅ User Management (CRUD operations)
+- ✅ RESTful API
+- ✅ Responsive UI
+- ✅ MySQL Database persistence
+- ✅ Connection pooling
 
-## Prerequisites
+### DevOps Features
+- ✅ Dockerized application
+- ✅ Kubernetes manifests for production deployment
+- ✅ Blue-Green deployment strategy
+- ✅ Automated CI/CD with Jenkins
+- ✅ Infrastructure provisioning with Terraform
+- ✅ Security scanning (Trivy, SonarQube)
+- ✅ RBAC for Kubernetes
 
-Before setting up this project, ensure you have the following installed on your machine:
+## 🏗️ Architecture
 
-- [Node.js](https://nodejs.org/) (version 12.x or higher)
-- [MySQL](https://www.mysql.com/) (version 5.7 or higher)
+### Application Architecture
+```
+┌─────────────────┐
+│   Client (UI)   │
+│  HTML/CSS/JS    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Node.js Server │
+│   Express API   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  MySQL Database │
+│  Persistent Vol │
+└─────────────────┘
+```
 
-## Setup Instructions
+### Infrastructure Architecture
+```
+AWS EKS Cluster
+├── Blue Deployment (v1)
+├── Green Deployment (v2)
+├── LoadBalancer Service
+├── MySQL StatefulSet
+└── Persistent Volumes
+```
 
-### 1. Setting Up MySQL Server
+## 📁 Project Structure
 
-First, you need to set up a MySQL server on your local machine.
+```
+.
+├── client/                 # Frontend application
+│   ├── src/               # Source files
+│   ├── public/            # Static assets
+│   └── package.json
+│
+├── server/                # Backend application
+│   ├── config/           # Database configuration
+│   ├── controllers/      # Business logic
+│   ├── models/           # Data models
+│   ├── routes/           # API routes
+│   └── package.json
+│
+├── kubernetes/           # Kubernetes manifests
+│   ├── app-deployment-blue.yml
+│   ├── app-deployment-green.yml
+│   ├── app-service.yml
+│   ├── mysql-ds.yml
+│   ├── pv-pvc.yml
+│   └── README.md
+│
+├── ci-cd/               # CI/CD configuration
+│   ├── Jenkinsfile
+│   └── README.md
+│
+├── terraform/           # Infrastructure as Code
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── output.tf
+│   └── README.md
+│
+├── RBAC/               # Kubernetes RBAC
+│   ├── rbac.yml
+│   └── README.md
+│
+├── docs/               # Documentation
+│   ├── deployment-guide.md
+│   ├── troubleshooting.md
+│   └── architecture.md
+│
+├── Dockerfile          # Docker image definition
+├── docker-compose.yml  # Local development setup
+└── README.md          # This file
+```
 
-1. **Update the package index:**
+## 🔧 Prerequisites
 
-   ```bash
-   sudo apt update
-   ```
+### Required Tools
+- **Docker** (20.10+)
+- **Kubernetes** (1.24+)
+- **kubectl** (configured for your cluster)
+- **Terraform** (1.0+)
+- **Node.js** (16+ for local development)
+- **MySQL** (8.0+ for local development)
 
-2. **Install the MySQL server:**
+### AWS Requirements
+- AWS Account with EKS access
+- AWS CLI configured
+- IAM permissions for EKS, EC2, VPC
 
-   ```bash
-   sudo apt install mysql-server
-   ```
+### Jenkins Requirements
+- Jenkins server with plugins:
+  - Docker Pipeline
+  - Kubernetes CLI
+  - SonarQube Scanner
+  - Trivy
 
-3. **Log in to the MySQL shell as root:**
+## 🚀 Quick Start
 
-   ```bash
-   sudo mysql -u root
-   ```
+### Local Development with Docker Compose
 
-4. **Set a password for the root user and update the authentication method:**
+```bash
+# Clone the repository
+git clone https://github.com/NandeeshDK/3-Tier-NodeJS-MySql-Docker-main.git
+cd 3-Tier-NodeJS-MySql-Docker-main
 
-   ```sql
-   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
-   FLUSH PRIVILEGES;
-   ```
+# Start the application
+docker-compose up -d
 
-   Replace `'password'` with a secure password of your choice.
+# Access the application
+# Frontend: http://localhost:80
+# Backend API: http://localhost:5000
+```
 
-5. **Exit the MySQL shell:**
+### Manual Setup
 
-   ```sql
-   exit;
-   ```
+1. **Setup MySQL Database**
+```bash
+sudo apt install mysql-server
+mysql -u root -p < database/schema.sql
+```
 
-6. **Log in to the MySQL shell again with the new password:**
+2. **Install Server Dependencies**
+```bash
+cd server
+npm install
+npm start
+```
 
-   ```bash
-   sudo mysql -u root -p
-   ```
+3. **Build Client**
+```bash
+cd client
+npm install
+npm run build
+```
 
-   Enter the password you set in the previous step.
+## 🌐 Deployment
 
-7. **Create a new database:**
+### Kubernetes Deployment
 
-   ```sql
-   CREATE DATABASE test_db;
-   ```
+See [kubernetes/README.md](kubernetes/README.md) for detailed instructions.
 
-8. **Switch to the new database:**
+```bash
+# Create namespace
+kubectl create namespace webapps
 
-   ```sql
-   USE test_db;
-   ```
+# Apply RBAC
+kubectl apply -f RBAC/rbac.yml
 
-9. **Create the `users` table:**
+# Deploy MySQL
+kubectl apply -f kubernetes/pv-pvc.yml
+kubectl apply -f kubernetes/mysql-ds.yml
 
-   ```sql
-   CREATE TABLE users (
-       id INT AUTO_INCREMENT PRIMARY KEY,
-       name VARCHAR(255) NOT NULL,
-       email VARCHAR(255) NOT NULL UNIQUE,
-       role ENUM('Admin', 'User') NOT NULL
-   );
-   ```
+# Deploy Application (Blue)
+kubectl apply -f kubernetes/app-deployment-blue.yml
+kubectl apply -f kubernetes/app-service.yml
 
-   This table will store user information, including their name, email, and role.
+# Get LoadBalancer URL
+kubectl get svc app -n webapps
+```
 
-### 2. Configuring and Running the Client
+### Terraform Infrastructure
 
-The client side of the application is built using modern JavaScript, HTML, and CSS. To configure and run the client:
+See [terraform/README.md](terraform/README.md) for EKS cluster setup.
 
-1. **Navigate to the client folder:**
+```bash
+cd terraform
+terraform init
+terraform plan
+terraform apply
+```
 
-   ```bash
-   cd client
-   ```
+## 🔄 CI/CD Pipeline
 
-2. **Install the required dependencies:**
+### Jenkins Pipeline Stages
 
-   ```bash
-   npm install
-   ```
+See [ci-cd/README.md](ci-cd/README.md) for detailed configuration.
 
-3. **Build the client application:**
+1. **Git Checkout** - Clone repository
+2. **SonarQube Analysis** - Code quality scan
+3. **Trivy FS Scan** - Filesystem security scan
+4. **Docker Build** - Build Docker image
+5. **Trivy Image Scan** - Container security scan
+6. **Docker Push** - Push to Docker Hub
+7. **Deploy to Kubernetes** - Deploy selected environment
+8. **Switch Traffic** - Blue-Green traffic switching
+9. **Verify Deployment** - Health checks
 
-   ```bash
-   npm run build
-   ```
+### Pipeline Parameters
+- `DEPLOY_ENV`: blue | green
+- `DOCKER_TAG`: blue | green
+- `SWITCH_TRAFFIC`: true | false
 
-   This will create a production build of the client application, which will be served by the Express server.
+## 📊 Monitoring
 
-### 3. Configuring and Running the Server
+### Check Application Status
 
-The server side is built using Node.js and Express and connects to the MySQL database to manage user data.
+```bash
+# Get all pods
+kubectl get pods -n webapps
 
-1. **Navigate to the server folder:**
+# Check logs
+kubectl logs -f deployment/app-blue -n webapps
+kubectl logs -f deployment/app-green -n webapps
 
-   ```bash
-   cd server
-   ```
+# Get service details
+kubectl get svc app -n webapps
 
-2. **Install the required dependencies:**
+# Describe service
+kubectl describe svc app -n webapps
+```
 
-   ```bash
-   npm install
-   ```
+### Access LoadBalancer
 
-3. **Start the server:**
+```bash
+# Get LoadBalancer URL
+LB_URL=$(kubectl get svc app -n webapps -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo "Application URL: http://$LB_URL"
 
-   ```bash
-   npm start
-   ```
+# Test the application
+curl http://$LB_URL
+```
 
-   The server will run on `http://localhost:5000` by default.
+## 🔐 Security
 
-## Usage
+- **RBAC**: Kubernetes Role-Based Access Control
+- **Security Scanning**: Trivy for vulnerabilities
+- **Code Quality**: SonarQube analysis
+- **Network Policies**: Restricted pod communication
+- **Secrets Management**: Kubernetes secrets
 
-After following the setup instructions, you can access the application by navigating to `http://localhost:5000` in your web browser.
+## 🤝 Contributing
 
-### User Management Features:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-- **Add User:** Fill in the name, email, and role in the form and click "Add User" to add a new user.
-- **View Users:** The user list will be displayed below the form. Each user entry will have "Edit" and "Delete" buttons.
-- **Edit User:** Click the "Edit" button next to a user entry to update their details.
-- **Delete User:** Click the "Delete" button next to a user entry to remove them from the list.
+## 👥 Author
 
-## License
+**Nandeesh DK**
+- GitHub: [@NandeeshDK](https://github.com/NandeeshDK)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🙏 Acknowledgments
 
-### NOTE: This Application Should not be used for commercial purpose by anyone else other than DevOps Shack
+- AWS EKS Documentation
+- Kubernetes Best Practices
+- Jenkins Pipeline Examples
+- DevOps Community
+
+---
+
+⭐ **Star this repository if you find it helpful!**
+
 

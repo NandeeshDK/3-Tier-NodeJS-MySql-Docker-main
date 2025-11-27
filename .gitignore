@@ -1,0 +1,76 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+terraform/.terraform.tfstate.lock.info
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.html
+
+# Docker
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+*-kubeconfig.yaml
+
+# Jenkins
+.jenkins/
+
+# AWS
+*.pem
+*.key
+
+# Backups
+*.bak
+*.backup
+backup-*.yaml
+backup-*.sql
+
+# Temporary files
+*.tmp
+.cache/
+temp/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Old files
+*.old
+*.old.*
+README.old.md

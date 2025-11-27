@@ -1,0 +1,134 @@
+pipeline {
+    agent any
+
+    // 1. PARAMETERS from your previous image
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['blue', 'green'], description: 'Choose which environment to deploy: Blue or Green')
+        choice(name: 'DOCKER_TAG', choices: ['blue', 'green'], description: 'Choose the Docker image tag for the deployment')
+        booleanParam(name: 'SWITCH_TRAFFIC', defaultValue: false, description: 'Switch traffic between Blue and Green')
+    }
+
+    // 2. ENVIRONMENT variables (combined from both sources)
+    environment {
+        // Variables from your provided image
+        IMAGE_NAME = "nandeeshdk/app"
+        TAG = "${params.DOCKER_TAG}" // Dynamically set tag from parameter
+        KUBE_NAMESPACE = 'webapps'
+        // Your existing SCANNER_HOME is now set correctly
+        SCANNER_HOME = tool 'sonar-scanner' 
+    }
+
+    stages {
+        stage('Git checkout') {
+            steps {
+                echo 'Hello World'
+                git branch: 'main', url: 'https://github.com/NandeeshDK/3-Tier-NodeJS-MySql-Docker-main.git'
+            }
+        }
+
+        stage('Sonnar qube analysis') {
+            steps {
+                // Using the environment variable TAG here is a good practice if your Docker tag relates to the project name
+                withSonarQubeEnv(installationName: 'sonar', credentialsId: 'sonar-token') {
+                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=nodejsmysql -Dsonar.projectName=nodejsmysql -Dsonar.javascript.node.maxspace=4096"
+                }
+            }
+        }
+
+        stage('Trivy FS Scan') {
+            steps {
+                // Corrected formatting in the sh step
+                sh "trivy fs --format table -o fs.html ."
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred') {
+                        // Using the dynamic TAG variable from the environment block
+                        sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                // Using the dynamic TAG variable for the image scan
+                sh "trivy image --format table -o image_scan.html ${IMAGE_NAME}:${TAG}"
+            }
+        }
+
+        stage('Docker Push Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred') {
+                        // Using the dynamic TAG variable for the push
+                        sh "docker push ${IMAGE_NAME}:${TAG}"
+                    }
+                }
+            }
+        }
+         stage('Deploy SVC-APP') {
+            steps {
+                script {
+                       withKubeConfig(caCertificate: '', clusterName: 'devopsshack-cluster', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://9E969C056491EFF6AD91889543DC2B7C.gr7.us-east-1.eks.amazonaws.com') {
+                               sh """
+                                 if ! kubectl get svc app -n ${KUBE_NAMESPACE};  then
+                    			     kubectl apply -f app-service.yml -n ${KUBE_NAMESPACE} 
+                    			 fi
+                    			 """
+                             }
+                    }
+                }
+            }
+            stage('Deploy to Kubernetes') {
+                    steps {
+                        script {
+                            def deploymentFile = ""
+                            if (params.DEPLOY_ENV == 'blue') {
+                                deploymentFile = 'app-deployment-blue.yml'
+                            } else {
+                                deploymentFile = 'app-deployment-green.yml'
+                            }
+                
+                            withKubeConfig(caCertificate: '', clusterName: 'devopsshack-cluster', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://9E969C056491EFF6AD91889543DC2B7C.gr7.us-east-1.eks.amazonaws.com') {
+                                sh "kubectl apply -f pv-pvc.yml -n ${KUBE_NAMESPACE} --validate=false"
+                                sh "kubectl apply -f mysql-ds.yml -n ${KUBE_NAMESPACE} --validate=false"
+                                sh "kubectl apply -f ${deploymentFile} -n ${KUBE_NAMESPACE} --validate=false"
+                                 }
+                            }
+                         }
+                    }
+            stage('Switch Traffic') {
+                when {
+                            expression { return params.SWITCH_TRAFFIC }
+                        }
+                        steps {
+                            script {
+                                def newEnv = params.DEPLOY_ENV
+                                withKubeConfig(caCertificate: '', clusterName: 'devopsshack-cluster', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://9E969C056491EFF6AD91889543DC2B7C.gr7.us-east-1.eks.amazonaws.com') {
+                                    sh "kubectl patch service app -p '{\"spec\": {\"selector\": {\"app\": \"app\", \"version\": \"${newEnv}\"}}}' -n ${KUBE_NAMESPACE}"
+                                }
+                            }
+                        }
+                    }
+                    
+                stage('Verify Deployment') {
+                    steps {
+                       script {
+                        def verifyEnv = params.DEPLOY_ENV
+                         withKubeConfig(caCertificate: '', clusterName: 'devopsshack-cluster', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://9E969C056491EFF6AD91889543DC2B7C.gr7.us-east-1.eks.amazonaws.com') {
+                            sh """
+                                kubectl get pods -l version=${verifyEnv} -n ${KUBE_NAMESPACE}
+                                kubectl get svc app -n ${KUBE_NAMESPACE}
+                            """
+                        }
+                     }
+                    }
+               }
+            
+
+    }
+}

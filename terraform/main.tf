@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-1"
 }
 
 resource "aws_vpc" "devopsshack_vpc" {
@@ -14,7 +14,7 @@ resource "aws_subnet" "devopsshack_subnet" {
   count = 2
   vpc_id                  = aws_vpc.devopsshack_vpc.id
   cidr_block              = cidrsubnet(aws_vpc.devopsshack_vpc.cidr_block, 8, count.index)
-  availability_zone       = element(["ap-south-1a", "ap-south-1b"], count.index)
+  availability_zone       = element(["us-east-1a", "us-east-1b"], count.index)
   map_public_ip_on_launch = true
 
   tags = {
@@ -68,9 +68,18 @@ resource "aws_security_group" "devopsshack_node_sg" {
   vpc_id = aws_vpc.devopsshack_vpc.id
 
   ingress {
+    description = "Allow nodes to communicate with each other"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
+    self        = true
+  }
+
+  ingress {
+    description = "Allow SSH access"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -86,6 +95,37 @@ resource "aws_security_group" "devopsshack_node_sg" {
   }
 }
 
+# Separate security group rules to avoid circular dependency
+resource "aws_security_group_rule" "cluster_ingress_node_https" {
+  description              = "Allow nodes to communicate with the cluster API Server"
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.devopsshack_cluster_sg.id
+  source_security_group_id = aws_security_group.devopsshack_node_sg.id
+}
+
+resource "aws_security_group_rule" "node_ingress_cluster" {
+  description              = "Allow worker Kubelets and pods to receive communication from the cluster control plane"
+  type                     = "ingress"
+  from_port                = 1025
+  to_port                  = 65535
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.devopsshack_node_sg.id
+  source_security_group_id = aws_security_group.devopsshack_cluster_sg.id
+}
+
+resource "aws_security_group_rule" "node_ingress_cluster_https" {
+  description              = "Allow pods running extension API servers on port 443 to receive communication from cluster control plane"
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.devopsshack_node_sg.id
+  source_security_group_id = aws_security_group.devopsshack_cluster_sg.id
+}
+
 resource "aws_eks_cluster" "devopsshack" {
   name     = "devopsshack-cluster"
   role_arn = aws_iam_role.devopsshack_cluster_role.arn
@@ -94,6 +134,10 @@ resource "aws_eks_cluster" "devopsshack" {
     subnet_ids         = aws_subnet.devopsshack_subnet[*].id
     security_group_ids = [aws_security_group.devopsshack_cluster_sg.id]
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.devopsshack_cluster_role_policy,
+  ]
 }
 
 resource "aws_eks_node_group" "devopsshack" {
@@ -114,6 +158,12 @@ resource "aws_eks_node_group" "devopsshack" {
     ec2_ssh_key = var.ssh_key_name
     source_security_group_ids = [aws_security_group.devopsshack_node_sg.id]
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.devopsshack_node_group_role_policy,
+    aws_iam_role_policy_attachment.devopsshack_node_group_cni_policy,
+    aws_iam_role_policy_attachment.devopsshack_node_group_registry_policy,
+  ]
 }
 
 resource "aws_iam_role" "devopsshack_cluster_role" {
